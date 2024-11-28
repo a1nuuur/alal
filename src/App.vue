@@ -11,6 +11,7 @@
       <div v-for="(detail, index) in details" :key="index" class="item">
         <img :src="detail.image" alt="Добавить изображение" />
         <span>{{ detail.title }}</span>
+        <span><strong>Цена:</strong> {{ calculateTotalPrice(index) }} тг.</span>
         <div>
           <button @click="addQuantity(index)">+</button>
           <span>{{ detail.quantity }}</span>
@@ -20,13 +21,14 @@
           <h3>Детали</h3>
           <ul>
             <li v-for="(option, optionIndex) in detail.options" :key="optionIndex">
-              {{ option.name }} - Кол-во: {{ option.quantity }}
+              {{ option.name }} - Кол-во: {{ option.quantity }} - Цена за единицу: {{ option.price }} тг.
               <button @click="addOptionQuantity(index, optionIndex)">+</button>
               <button @click="removeOptionQuantity(index, optionIndex)" :disabled="option.quantity <= 0">-</button>
               <button @click="removeOption(index, optionIndex)">Удалить</button>
             </li>
           </ul>
           <input type="text" v-model="detail.newOption.name" placeholder="Добавить деталь" />
+          <input type="number" v-model.number="detail.newOption.price" placeholder="Цена" />
           <button @click="addOption(index)">Добавить</button>
         </div>
         <button @click="removeDetail(index)" class="remove-btn">Удалить</button>
@@ -59,7 +61,7 @@ export default {
         image: '',
         quantity: 0,
         options: [],
-        newOption: { name: '', quantity: 1 }
+        newOption: { name: '', price: 0, quantity: 1 }
       },
       details: [
         {
@@ -67,30 +69,20 @@ export default {
           image: 'https://png.pngtree.com/png-clipart/20231020/original/pngtree-3d-car-white-blank-template-auto-body-car-photo-png-image_13389021.png',
           quantity: 10,
           options: [
-            { name: 'Стекла', quantity: 2 },
-            { name: 'Двери', quantity: 1 }
+            { name: 'Стекла', quantity: 2, price: 5000 },
+            { name: 'Двери', quantity: 1, price: 11000 }
           ],
-          newOption: { name: '', quantity: 1 }
+          newOption: { name: '', price: 0, quantity: 1 }
         },
         {
           title: 'Двигатель',
           image: 'https://png.pngtree.com/png-clipart/20231020/original/pngtree-3d-car-white-blank-template-auto-body-car-photo-png-image_13389021.png',
           quantity: 5,
           options: [
-            { name: 'Поршни', quantity: 3 },
-            { name: 'Чугунные трубки', quantity: 1 }
+            { name: 'Поршни', quantity: 3, price: 3000 },
+            { name: 'Чугунные трубки', quantity: 1, price: 2000 }
           ],
-          newOption: { name: '', quantity: 1 }
-        },
-        {
-          title: 'Двери',
-          image: 'https://png.pngtree.com/png-clipart/20231020/original/pngtree-3d-car-white-blank-template-auto-body-car-photo-png-image_13389021.png',
-          quantity: 3,
-          options: [
-            { name: 'Ручка', quantity: 4 },
-            { name: 'Механизм', quantity: 2 }
-          ],
-          newOption: { name: '', quantity: 1 }
+          newOption: { name: '', price: 0, quantity: 1 }
         }
       ],
       isModalOpen: false
@@ -120,10 +112,10 @@ export default {
         this.newDetail.image = '';
         this.newDetail.quantity = 0;
         this.newDetail.options = [];
-        this.newDetail.newOption = { name: '', quantity: 1 };
+        this.newDetail.newOption = { name: '', price: 0, quantity: 1 };
         this.closeModal();
       } else {
-        alert('Please provide both a title and an image.');
+        alert('ошибка');
       }
     },
     removeDetail(index) {
@@ -139,9 +131,9 @@ export default {
     },
     addOption(index) {
       const newOption = this.details[index].newOption;
-      if (newOption.name && newOption.quantity > 0) {
+      if (newOption.name && newOption.price > 0 && newOption.quantity > 0) {
         this.details[index].options.push({ ...newOption });
-        this.details[index].newOption = { name: '', quantity: 1 };
+        this.details[index].newOption = { name: '', price: 0, quantity: 1 };
       }
     },
     removeOption(detailIndex, optionIndex) {
@@ -155,10 +147,18 @@ export default {
         this.details[detailIndex].options[optionIndex].quantity--;
       }
     },
+    calculateTotalPrice(index) {
+      const detail = this.details[index];
+      return detail.options.reduce(
+          (total, option) => total + option.price * option.quantity,
+          0
+      );
+    },
     exportToExcel() {
       const wsData = this.details.map((detail) => ({
         Title: detail.title,
         Quantity: detail.quantity,
+        Price: this.calculateTotalPrice(this.details.indexOf(detail)), // Добавим цену
         Options: detail.options
             .map((option) => `${option.name} (x${option.quantity})`)
             .join(', '),
@@ -167,10 +167,17 @@ export default {
       const ws = XLSX.utils.json_to_sheet(wsData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Details');
-      XLSX.writeFile(wb, 'details.xlsx');
+
+      // Проверка на название файла
+      try {
+        XLSX.writeFile(wb, 'details.xlsx');
+      } catch (error) {
+        console.error('Ошибка экспорта в Excel:', error);
+      }
     }
+
   }
-};
+    };
 </script>
 
 <style>
@@ -207,7 +214,7 @@ body {
 
 .item img {
   width: 100%;
-  height: calc(100% - 40px);
+  height: 200px;
   object-fit: cover;
   border-radius: 5px;
   margin-bottom: 10px;
@@ -253,5 +260,24 @@ body {
   right: 10px;
   font-size: 20px;
   cursor: pointer;
+}
+
+input[type="text"],
+input[type="number"],
+button {
+  margin: 5px 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+button {
+  background-color: #3498db;
+  color: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #2980b9;
 }
 </style>
