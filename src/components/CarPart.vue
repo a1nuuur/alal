@@ -7,6 +7,7 @@
     <td>
       <button @click="addPart">Добавить</button>
       <button @click="removePart">Удалить</button>
+      <button @click="addSubpart">Добавить поддеталь</button>
     </td>
   </tr>
 
@@ -15,7 +16,7 @@
         v-for="(subpart, index) in part.subparts"
         :key="index"
         :part="subpart"
-        :parent="part.name"
+        :parent="partNameWithParent"
     />
   </template>
 </template>
@@ -28,7 +29,6 @@ export default {
     parent: String
   },
   computed: {
-    // Если у элемента есть дочерние элементы, цена считается как сумма цен дочерних элементов
     calculatedPrice() {
       if (this.part.subparts.length > 0) {
         return this.part.subparts.reduce(
@@ -40,7 +40,6 @@ export default {
       }
     },
     totalCost() {
-      // Общая стоимость: цена элемента (или его дочерних элементов) умноженная на количество
       return this.calculatedPrice * this.part.quantity;
     },
     partNameWithParent() {
@@ -55,6 +54,15 @@ export default {
       if (this.part.quantity > 0) {
         this.part.quantity--;
       }
+    },
+    addSubpart() {
+      const newSubpart = {
+        name: "Новая деталь",
+        price: 100,
+        quantity: 1,
+        subparts: []
+      };
+      this.part.subparts.push(newSubpart);
     }
   }
 };
